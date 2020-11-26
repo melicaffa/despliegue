@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 import redis
-import uuid
 import json
-import time
+from uuid import uuid4
+from time import sleep
+import settings
+
 ########################################################################
 # COMPLETAR AQUI: Crear conexion a redis y asignarla a la variable "db".
 ########################################################################
-db = redis.Redis(host='redis', port=6379,db=0)
+db = redis.Redis(host='redis', port= settings.REDIS_PORT, db=0)
 ########################################################################
 
 
 def model_predict(text_data):
-    
     """
     Esta función recibe sentencias para analizar desde nuestra API,
     las encola en Redis y luego queda esperando hasta recibir los
@@ -33,7 +34,6 @@ def model_predict(text_data):
     """
     prediction = None
     score = None
-
     #################################################################
     # COMPLETAR AQUI: Crearemos una tarea para enviar a procesar.
     # Una tarea esta definida como un diccionario con dos entradas:
@@ -43,20 +43,43 @@ def model_predict(text_data):
     #       string.
     # Luego utilice rpush de Redis para encolar la tarea.
     #################################################################
-    job_id = str(uuid.uuid4())
+    job_id = str(uuid4())
     job_data = {
-            'id': job_id,
+            'id': job_id, 
             'text': text_data
-            }
+    }
+    db.rpush('service_queue',json.dumps(job_data)) 
+
+    #raise NotImplementedError
     #################################################################
-    db.rpush('service_queue',json.dumps(job_data))
+
     # Iterar hasta recibir el resultado
     while True:
+        #################################################################
+        # COMPLETAR AQUI: En cada iteración tenemos que:
+        #     1. Intentar obtener resultados desde Redis utilizando
+        #        como key nuestro "job_id".
+        #     2. Si no obtuvimos respuesta, dormir el proceso algunos
+        #        milisegundos.
+        #     3. Si obtuvimos respuesta, extraiga la predicción y el
+        #        score para ser devueltos como salida de esta función.
+        #################################################################
         response = db.get(job_id)
-        if response is not None:
+        if response is not None :
             response = json.loads(response.decode('utf-8'))
             prediction = response['prediction']
             score = response['score']
-        time.sleep(1)
+
+            db.delete(job_id)
+            break
+
+        sleep(1)
+        #################################################################
+
+    print(json.dumps({
+        "text":text_data,
+        "score":score,
+        "prediction":prediction
+    }))
 
     return prediction, score

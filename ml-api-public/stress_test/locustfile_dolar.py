@@ -10,10 +10,10 @@ class QuickstartUser(HttpUser):
 
     @task(3)
     def predict(self):
-        caso = random.randint(0, 2)
+        caso = random.randint(0, 1)
         if caso == 0:
             self.client.post('/predict', params={'text': 'Lindo dia!'})
-        elif caso == 1:
+        elif caso== 1:
             self.client.post('/predict', params={'text': 'Que feo dia'})
         else:
             self.client.post('/predict', params={'text': 'Hola'})
